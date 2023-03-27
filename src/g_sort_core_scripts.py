@@ -1221,7 +1221,13 @@ def run_pattern_movie(p,k,preloaded_data, q):
     
     # Load post-stimulation voltage traces
     try:
-        signal = get_oldlabview_pp_data(estim_analysis_path , p, k)
+        signals = []
+        for epath in estim_analysis_path:
+            dsignal = get_oldlabview_pp_data(epath, p, k)
+            signals.append(dsignal)
+
+        signal = np.vstack(signals)
+
         num_trials = len(signal)
     except:
         q.put((-1, -1, -1, -1, -1, "No traces for this pattern/movie"))
@@ -1236,6 +1242,7 @@ def run_pattern_movie(p,k,preloaded_data, q):
         if len(electrode_list):
             # Trucate signal to relevant region
             raw_signal = signal[:, electrode_list, start_time_limit:end_time_limit].astype(float) 
+            # concatenate artifact scan data HERE
            
             
             # Get saturation mask
@@ -1249,7 +1256,7 @@ def run_pattern_movie(p,k,preloaded_data, q):
 
             # Run graph estimation algorithm
             data_on_cells = n_to_data_on_cells[cell]
-            G, final_signals, edge_to_matched_signals, note = DAG_estimation(event_labels, electrode_list, raw_signal, mask, 1, noise, data_on_cells)
+            G, final_signals, edge_to_matched_signals, note = DAG_estimation(event_labels, electrode_list, raw_signal, mask, 1, noise, data_on_cells) #artifact_cluster = event_labels[0]
 
             # Compute probabilities from graph
             cell_to_prob = get_probabilities(G, event_labels)
@@ -1270,7 +1277,67 @@ def run_pattern_movie(p,k,preloaded_data, q):
         mean_artifact_signals = np.array([np.mean(s[1:], axis = 0) if len(s) > 1 else s[0] for s in artifact_signals])
 
     q.put((p, k, probs, mean_artifact_signals, num_trials, ""))
-    return 
+    return
+
+def run_pattern_movie_live(signal, preloaded_data):
+    """
+    Assuming run for a given pattern (p) and a given amplitude (k)
+
+    signal: np.ndarray, tensor of shape T x E x N where T is number of trials, E is electrodes (512 or 519 + 1 for TTL),
+                        and N is the number of time samples recorded
+    preloaded_data: tuple containing
+                    cell_data_dict: {cell_id: data on cell from get_center_eis()}
+                    cells_to_gsort: cells to run gsort on for this p, k
+                    noise: np.ndarray, visionloader channel noise array
+                    _, total_cell_to_electrode_list, mutual_cells, _ = get_cell_info(all_cell_types, vstim_data, compartments, noise, mutual_threshold=mutual_threshold)                    
+    """
+    # Pre-computed data from calling script 
+    cell_data_dict, cells_to_gsort, mutual_cells, total_cell_to_electrode_list, end_time_limit, start_time_limit, cluster_delay, noise = preloaded_data
+    
+    # Initialize output arrays
+    probs = np.zeros(len(cells_to_gsort))
+    num_trials = len(signal)
+
+    # Iterate over all potential cells
+    cell_ind = 0
+    for cell in cells_to_gsort:
+
+        # Verify the electrodes has some electrodes to compare against
+        electrode_list =  list(set([e for c in mutual_cells[cell] for e in total_cell_to_electrode_list[c]]))
+        
+        if len(electrode_list):
+            # Trucate signal to relevant region
+            raw_signal = signal[:, electrode_list, start_time_limit:end_time_limit].astype(float) 
+           
+            
+            # Get saturation mask
+            mask =  get_mask(raw_signal, )
+            
+            # Get clustering
+            cell_to_electrode_list = {k:v for k,v in total_cell_to_electrode_list.items() if k in mutual_cells[cell]}
+            cluster_cliques = cluster_each_cell(raw_signal,mask, cell_to_electrode_list, electrode_list, noise, "", cluster_delay = cluster_delay)
+            event_labels = convert_cliques_to_labels(cluster_cliques, num_trials)
+            event_labels = merge_clusters_by_noise(electrode_list, raw_signal, event_labels,  mask, noise)
+
+            # Run graph estimation algorithm
+            data_on_cells = cell_data_dict[cell]
+            G, final_signals, edge_to_matched_signals, note = DAG_estimation(event_labels, electrode_list, raw_signal, mask, 1, noise, data_on_cells)
+
+            # Compute probabilities from graph
+            cell_to_prob = get_probabilities(G, event_labels)
+            
+            # Find bad edges in graph
+            bad_edges = find_bad_edges(cell, edge_to_matched_signals, mask, data_on_cells, electrode_list, noise)
+            
+            prob_error = compute_probability_error(G, event_labels, bad_edges)
+            probs[cell_ind] = cell_to_prob[cell]-prob_error
+
+        cell_ind += 1
+            
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+
+    return probs
 
 def shift_sig(sig, shifts):
     """
