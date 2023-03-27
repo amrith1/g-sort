@@ -1,17 +1,17 @@
 import numpy as np
 import sys
-# import src.utilities import visionloader as vl
+# import gsort.utilities import visionloader as vl
 
 
-import src.utilities.visionloader as vl
+import gsort.utilities.visionloader as vl
 print(vl.__file__)
 
 
-from src.old_labview_data_reader import *
+from gsort.old_labview_data_reader import *
 import collections
 from scipy.optimize import curve_fit
 import copy
-import src.utilities.electrode_map
+import gsort.utilities.electrode_map
 import time
 from scipy.io import loadmat,savemat
 import pickle
@@ -68,7 +68,7 @@ class TemplateLoader:
         self.noise = self.spikesorting.channel_noise
         
         self.groups = {}
-        array_map = src.utilities.electrode_map.get_litke_array_adj_mat_by_array_id(array_id)
+        array_map = gsort.utilities.electrode_map.get_litke_array_adj_mat_by_array_id(array_id)
         for center, surround in enumerate(array_map):
             self.groups[center] = [center] + surround
         
@@ -530,7 +530,7 @@ class AritifactEstimator:
     def __init__(self, analysis_path, datarun, p, tl, stim_recorded_samples = 55, array_id = 502):
         self.tl = tl
         self.array_id = array_id
-        array_map = src.electrode_map.get_litke_array_adj_mat_by_array_id(array_id)
+        array_map = gsort.electrode_map.get_litke_array_adj_mat_by_array_id(array_id)
         self.num_electrodes = len(array_map)
         self.artifacts = {}
         self.artifacts[0] = np.zeros((stim_recorded_samples*self.num_electrodes,))

@@ -1,4 +1,4 @@
-import src.eilib as eil
+import gsort.eilib as eil
 import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.cm as cm
@@ -6,13 +6,13 @@ import matplotlib as mpl
 import pandas as pd
 pd.set_option('display.max_columns', None)
 import pickle
-import src.stimlib as st
+import gsort.stimlib as st
 import random
 import matplotlib.patches as mpatches
 from matplotlib.patches import Ellipse
-import src.old_labview_data_reader as oldr
+import gsort.old_labview_data_reader as oldr
 from scipy import stats
-import src.post_processing_utils as gpa #jeff
+import gsort.post_processing_utils as gpa #jeff
 
 #GLOBALS----------------------------------------
 #define curve fits

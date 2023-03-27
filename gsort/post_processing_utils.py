@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.optimize import curve_fit
-from src.run_gsort_v2_wuericmod import *
+from gsort.run_gsort_v2_wuericmod import *
 
 def enforce_noisy_monotonicity(sigmoid, st, noise_limit):
     

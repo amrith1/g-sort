@@ -15,8 +15,8 @@ import numpy as np
 import scipy as sp
 from scipy.io import loadmat
 import os
-import src.utilities.electrode_map as elcmp
-import src.utilities.visionloader as vl
+import gsort.utilities.electrode_map as elcmp
+import gsort.utilities.visionloader as vl
 
 import pdb
 

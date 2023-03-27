@@ -1,7 +1,7 @@
 # from setuptools import find_packages, setup
 
 # setup(
-#     name='src',
+#     name='gsort',
 #     packages=find_packages(),
 # )
 
@@ -15,17 +15,17 @@ from Cython.Build import cythonize
 
 
 ext_modules = [
-    Extension("src.utilities.cython_extensions.bin2py_cythonext", 
-                ["src/utilities/cython_extensions/bin2py_cythonext.pyx",]),
-    Extension("src.utilities.cython_extensions.visionfile_cext",
-                    ["src/utilities/cython_extensions/visionfile_cext.pyx", ]),
-    Extension("src.utilities.cython_extensions.visionwrite_cext",
-                ["src/utilities/cython_extensions/visionwrite_cext.pyx",]),
+    Extension("gsort.utilities.cython_extensions.bin2py_cythonext", 
+                ["gsort/utilities/cython_extensions/bin2py_cythonext.pyx",]),
+    Extension("gsort.utilities.cython_extensions.visionfile_cext",
+                    ["gsort/utilities/cython_extensions/visionfile_cext.pyx", ]),
+    Extension("gsort.utilities.cython_extensions.visionwrite_cext",
+                ["gsort/utilities/cython_extensions/visionwrite_cext.pyx",]),
 ]
 
 
 setup(
-    name='src',
+    name='gsort',
     packages=find_packages(),
     ext_modules=cythonize(ext_modules),
 #     cmd_class={'build_ext' : build_ext}

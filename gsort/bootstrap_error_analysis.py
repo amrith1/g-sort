@@ -2,12 +2,12 @@ import os
 import numpy as np
 import pickle
 import tqdm
-import src.multielec_utils as mutils
+import gsort.multielec_utils as mutils
 import re 
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-from src.old_labview_data_reader import *
-import src.utilities.visionloader as vl
+from gsort.old_labview_data_reader import *
+import gsort.utilities.visionloader as vl
 
 def get_bootstrap_information(ANALYSIS_BASE, gsort_path,dataset, estim, wnoise, ps, n, electrodes_stored = True):
     electrical_path = os.path.join(ANALYSIS_BASE, dataset, estim)

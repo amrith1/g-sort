@@ -5,8 +5,8 @@ import numpy as np
 import sklearn.decomposition
 import scipy.io as sio
 
-from src.artifact_estimator_class import *
-from src.old_labview_data_reader import *
+from gsort.artifact_estimator_class import *
+from gsort.old_labview_data_reader import *
 import pickle
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -18,15 +18,15 @@ from itertools import chain, combinations
 # from small_sample_variance import *
 from scipy.ndimage.interpolation import shift
 import multiprocessing as mp
-import src.eilib as eil
+import gsort.eilib as eil
 import warnings
 from scipy.signal import wiener
 
 from skimage.util.shape import view_as_windows as viewW
 
-import src.elecresploader as el
+import gsort.elecresploader as el
 import scipy.signal
-import src.signal_alignment as sam
+import gsort.signal_alignment as sam
 
 
 from itertools import product

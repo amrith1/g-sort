@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 #plt.switch_backend('Agg')
-import src.stimlib as st
+import gsort.stimlib as st
 import glob
 import warnings
 import random
