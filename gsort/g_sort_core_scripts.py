@@ -2,43 +2,24 @@ import sys
 import copy
 import math
 import itertools
+from collections import Counter
+import warnings
+import multiprocessing as mp
+from typing import List, Tuple
 
+import scipy.signal
 import sklearn.cluster
 import numpy as np
 import sklearn.decomposition
-import scipy.io as sio
-
-#from gsort.artifact_estimator_class import *
-from gsort.old_labview_data_reader import get_oldlabview_pp_data
-import pickle
-import matplotlib.pyplot as plt
 import networkx as nx
-from collections import Counter
 import scipy.stats
-from functools import partial
-from functools import partialmethod
-from itertools import chain, combinations
-# from small_sample_variance import *
 from scipy.ndimage.interpolation import shift
-import multiprocessing as mp
-import gsort.eilib as eil
-import warnings
-from scipy.signal import wiener
-
-from skimage.util.shape import view_as_windows as viewW
-
-import gsort.elecresploader as el
-import scipy.signal
-import gsort.signal_alignment as sam
-
-
-from itertools import product
-from itertools import starmap
+from skimage.util.shape import view_as_windows
 
 import fastconv.corr1d as corr1d # compiled dependency wueric, compiled already
-from typing import List, Tuple
 
 from gsort.vision_template_loader_class import TemplateLoader
+
 
 def align_group(X, sample_len = 30, window = 10, res = 2):
     """
@@ -1011,10 +992,38 @@ def get_probabilities(G, event_labels, num_trials = None):
             probabilities[c] /= len(event_labels)
     return probabilities
 
+def axonorsomaRatio(wave,uppBound=1.6,lowBound=0.05):
+    try:
+        #Get index and value of (negative) min {only one}
+        minind = np.argmin(wave)
+        minval = np.min(wave)
+
+        #Get max vals to either side of min
+        maxvalLeft = np.max(wave[0:minind])
+        maxvalRight = np.max(wave[minind:])
+
+        if np.abs(minval) < max(maxvalLeft,maxvalRight):
+            rCompt = 'dendrite'
+        else:
+            if maxvalRight == 0:
+                ratio = 0
+            else:
+                ratio = maxvalLeft/maxvalRight
+            if ratio > uppBound:
+                rCompt = 'axon'
+            elif ratio < lowBound: #FUDGED
+                rCompt = 'soma'
+            else:
+                rCompt = 'mixed'
+    except ValueError:
+        rCompt = 'error' #wave is abnormally shaped (usually has min at leftmost or rightmost point)
+
+    return rCompt
+
 def get_significant_electrodes(ei, compartments, noise, cell_spike_window = 25, max_electrodes_considered = 30, rat = 2):
     cell_power = ei**2
     e_sorted = np.argsort(np.sum(ei**2, axis = 1))[::-1]
-    e_sorted = [e for e in e_sorted if eil.axonorsomaRatio(ei[e,:]) in compartments]
+    e_sorted = [e for e in e_sorted if axonorsomaRatio(ei[e,:]) in compartments]
     cell_power = ei**2
     power_ordering = np.argsort(cell_power, axis = 1)[:,::-1]
     significant_electrodes = np.argwhere(np.sum(np.take_along_axis(cell_power[e_sorted], power_ordering[e_sorted,:cell_spike_window], axis = 1), axis = 1) >= rat * cell_spike_window * np.array(noise[e_sorted])**2).flatten()
@@ -1207,81 +1216,6 @@ def merge_clusters_by_noise(electrode_list, signals, event_labels_tmp,  mask,  n
             event_labels[i] = min(shortest_edge[0], shortest_edge[1])
     return event_labels
 
-def run_pattern_movie(p,k,preloaded_data, q):
-    """
-    run_pattern_movie: Core script to run standard, single pattern-movie g-sort
-    
-    q: A shared queue used for parallel processing
-    """
-    # Pre-computed data from calling script 
-    cellids,running_cells_ind,relevant_cells,mutual_cells, total_cell_to_electrode_list, start_time_limit, end_time_limit,estim_analysis_path, noise, outpath, n_to_data_on_cells, NUM_CHANNELS, cluster_delay  = preloaded_data
-    time_limit = end_time_limit - start_time_limit
-    
-    # Initialize output arrays
-    artifact_signals = [np.full((1,time_limit), np.nan) for i in range(NUM_CHANNELS)]
-    total_electrode_list = []
-    probs = np.zeros(len(cellids))
-    
-    # Load post-stimulation voltage traces
-    try:
-        signals = []
-        for epath in estim_analysis_path:
-            dsignal = get_oldlabview_pp_data(epath, p, k)
-            signals.append(dsignal)
-
-        signal = np.vstack(signals)
-
-        num_trials = len(signal)
-    except:
-        q.put((-1, -1, -1, -1, -1, "No traces for this pattern/movie"))
-        return 
-
-    # Iterate over all potential cells
-    for cell in relevant_cells[p]:
-
-        # Verify the electrodes has some electrodes to compare against
-        electrode_list =  list(set([e for c in mutual_cells[cell] for e in total_cell_to_electrode_list[c]]))
-        
-        if len(electrode_list):
-            # Trucate signal to relevant region
-            raw_signal = signal[:, electrode_list, start_time_limit:end_time_limit].astype(float) 
-            # concatenate artifact scan data HERE
-           
-            
-            # Get saturation mask
-            mask =  get_mask(raw_signal, )
-            
-            # Get clustering
-            cell_to_electrode_list = {k:v for k,v in total_cell_to_electrode_list.items() if k in mutual_cells[cell]}
-            cluster_cliques = cluster_each_cell(raw_signal,mask, cell_to_electrode_list, electrode_list, noise, "", cluster_delay = cluster_delay)
-            event_labels = convert_cliques_to_labels(cluster_cliques, num_trials)
-            event_labels = merge_clusters_by_noise(electrode_list, raw_signal, event_labels,  mask, noise)
-
-            # Run graph estimation algorithm
-            data_on_cells = n_to_data_on_cells[cell]
-            G, final_signals, edge_to_matched_signals, note = DAG_estimation(event_labels, electrode_list, raw_signal, mask, 1, noise, data_on_cells) #artifact_cluster = event_labels[0]
-
-            # Compute probabilities from graph
-            cell_to_prob = get_probabilities(G, event_labels)
-            
-            # Find bad edges in graph
-            bad_edges = find_bad_edges(cell, edge_to_matched_signals, mask, data_on_cells, electrode_list, noise)
-            
-            prob_error = compute_probability_error(G, event_labels, bad_edges)
-            probs[cellids.index(cell)] = cell_to_prob[cell]-prob_error
-
-            total_electrode_list += list(set(total_electrode_list+electrode_list))
-           
-            for e in electrode_list:
-                artifact_signals[e] = np.concatenate((artifact_signals[e], final_signals[:,electrode_list.index(e),:]), axis = 0)
-            
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        mean_artifact_signals = np.array([np.mean(s[1:], axis = 0) if len(s) > 1 else s[0] for s in artifact_signals])
-
-    q.put((p, k, probs, mean_artifact_signals, num_trials, ""))
-    return
-
 def run_pattern_movie_live(signal, preloaded_data):
     """
     Assuming run for a given pattern (p) and a given amplitude (k)
@@ -1369,8 +1303,4 @@ def strided_indexing_roll(A, r):
 
     # Get sliding windows; use advanced-indexing to select appropriate ones
     n = A.shape[1]
-    return viewW(A_ext,(1,n))[np.arange(len(r)), -r + (n-1),0]
-
-
-
-
+    return view_as_windows(A_ext,(1,n))[np.arange(len(r)), -r + (n-1),0]
