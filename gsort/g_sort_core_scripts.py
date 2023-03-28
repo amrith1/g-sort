@@ -131,7 +131,13 @@ def compute_cosine_error(mask, edge_to_matched_signals, n, bad_edges_, similarit
     return bad_edges_
 
 def compute_cosine_similarity(u, v):
-    return np.sum(u * v)/np.linalg.norm(u)/np.linalg.norm(v)
+    #return np.sum(u * v)/np.linalg.norm(u)/np.linalg.norm(v)
+    """Returns the cosine similarity between two tensors."""
+    u_norm = np.linalg.norm(u)
+    v_norm = np.linalg.norm(v)
+    if u_norm == 0 or v_norm == 0:
+        return 0.0
+    return u.ravel().dot(v.ravel()) / (u_norm * v_norm)    
 
 def compute_duplicates(vstim_data, noise):
     MIN_CORR = .975
