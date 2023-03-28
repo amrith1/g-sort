@@ -1,7 +1,5 @@
 import numpy as np
 import visionloader as vl
-print(vl.__file__)
-
 import electrode_map
 import itertools
 
