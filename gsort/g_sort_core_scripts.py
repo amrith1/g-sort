@@ -1,12 +1,15 @@
 import sys
+import copy
+import math
+import itertools
 
 import sklearn.cluster
 import numpy as np
 import sklearn.decomposition
 import scipy.io as sio
 
-from gsort.artifact_estimator_class import *
-from gsort.old_labview_data_reader import *
+#from gsort.artifact_estimator_class import *
+from gsort.old_labview_data_reader import get_oldlabview_pp_data
 import pickle
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -35,7 +38,7 @@ from itertools import starmap
 import fastconv.corr1d as corr1d # compiled dependency wueric, compiled already
 from typing import List, Tuple
 
-
+from gsort.vision_template_loader_class import TemplateLoader
 
 def align_group(X, sample_len = 30, window = 10, res = 2):
     """
