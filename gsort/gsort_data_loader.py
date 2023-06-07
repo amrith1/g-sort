@@ -2,6 +2,7 @@ import os
 import numpy as np
 import tqdm
 import visionloader as vl
+from scipy.io import loadmat
 
 from joblib import Memory
 from .vision_template_loader_class import TemplateLoader
@@ -196,7 +197,7 @@ def get_cell_info(cell_types, vstim_data, compartments, noise, mutual_threshold 
 
 
 @memory.cache
-def load_vision_data_for_gsort(visual_analysis_base:str, dataset:str, vstim_datarun:str, cell_types = ['parasol', 'midget'], excluded_types = ['bad', 'dup']):     # RAT: 'ON' and 'OFF'
+def load_vision_data_for_gsort(estim_type:str, visual_analysis_base:str, dataset:str, vstim_datarun:str, patterns = None, cell_types = ['parasol', 'midget'], excluded_types = ['bad', 'dup']):     # RAT: 'ON' and 'OFF'
     """Load vision data for g-sort analysis to be passed to run_pattern_movie_live"""
     compartments = ['soma', 'mixed']
     vstim_analysis_path = os.path.join(visual_analysis_base, dataset, vstim_datarun)
@@ -230,11 +231,34 @@ def load_vision_data_for_gsort(visual_analysis_base:str, dataset:str, vstim_data
         
         return good_inds, np.abs(collapsed_ei)
 
+    if estim_type == 'single':
+        if vstim_data.electrode_map.shape[0] == 519:
+            if patterns == None:
+                BAD_ELECS_519 = np.array([130, 259, 260, 389, 390], dtype=int)
+                patterns = np.setdiff1d(np.arange(2, 519, dtype=int), BAD_ELECS_519)
 
-    # 60um patterns would be 1-512
-    # 30um patterns would be 2-519 with missing dead elecs
-    patterns = np.arange(1, 513, dtype=int)
-    stim_elecs = np.arange(1, 513, dtype=int)
+            else:
+                assert type(patterns) == np.ndarray, "User-input patterns should be numpy.ndarray"
+
+            stim_elecs = patterns.reshape(-1, 1)
+
+        elif vstim_data.electrode_map.shape[0] == 512:
+            if patterns == None:
+                patterns = np.arange(1, 513, dtype=int)
+
+            else:
+                assert type(patterns) == np.ndarray, "User-input patterns should be numpy.ndarray"
+
+            stim_elecs = patterns.reshape(-1, 1)
+
+    elif estim_type == 'triplet':
+        assert type(patterns) == np.ndarray, "User-input patterns should be numpy.ndarray"
+        triplet_dicts = loadmat('PATH/triplet_adj.mat')
+        if vstim_data.electrode_map.shape[0] == 519:
+            stim_elecs = triplet_dicts['LITKE_519'][patterns]
+
+        elif vstim_data.electrode_map.shape[0] == 512:
+            stim_elecs = triplet_dicts['LITKE_512'][patterns]
 
     all_cell_types = [ct for ct in vstim_data.get_all_present_cell_types() if 'bad' not in ct and 'dup' not in ct]
     total_electrode_list, total_cell_to_electrode_list, mutual_cells, array_id = get_cell_info(all_cell_types, vstim_data, compartments, NOISE, mutual_threshold=MUTUAL_THRESHOLD)
