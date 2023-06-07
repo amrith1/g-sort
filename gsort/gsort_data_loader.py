@@ -253,7 +253,7 @@ def load_vision_data_for_gsort(estim_type:str, visual_analysis_base:str, dataset
 
     elif estim_type == 'triplet':
         assert type(patterns) == np.ndarray, "User-input patterns should be numpy.ndarray"
-        triplet_dicts = loadmat('PATH/triplet_adj.mat')
+        triplet_dicts = loadmat('triplet_adj.mat')
         if vstim_data.electrode_map.shape[0] == 519:
             stim_elecs = triplet_dicts['LITKE_519'][patterns]
 
