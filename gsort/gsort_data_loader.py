@@ -256,13 +256,13 @@ def load_vision_data_for_gsort(estim_type:str, visual_analysis_base:str, dataset
         triplet_dicts = loadmat('triplet_adj.mat')
         if vstim_data.electrode_map.shape[0] == 519:
             BAD_ELECS_519 = np.array([1, 130, 259, 260, 389, 390, 519], dtype=int)
-            stim_elecs = triplet_dicts['LITKE_519'][patterns-1] + 1
+            stim_elecs = triplet_dicts['LITKE_519'][patterns]
             bad_pattern_inds = np.where(np.any(np.isin(stim_elecs, BAD_ELECS_519), axis=1))[0]
             if len(bad_pattern_inds) > 0:
                 raise ValueError(f'Triplet patterns {patterns[bad_pattern_inds]} contain one or more inactive electrodes.')
 
         elif vstim_data.electrode_map.shape[0] == 512:
-            stim_elecs = triplet_dicts['LITKE_512'][patterns-1] + 1
+            stim_elecs = triplet_dicts['LITKE_512'][patterns]
 
     all_cell_types = [ct for ct in vstim_data.get_all_present_cell_types() if 'bad' not in ct and 'dup' not in ct]
     total_electrode_list, total_cell_to_electrode_list, mutual_cells, array_id = get_cell_info(all_cell_types, vstim_data, compartments, NOISE, mutual_threshold=MUTUAL_THRESHOLD)
