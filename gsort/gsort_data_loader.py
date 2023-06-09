@@ -213,7 +213,7 @@ def load_vision_data_for_gsort(estim_type:str, visual_analysis_base:str, dataset
     NOISE = vstim_data.channel_noise
     duplicates, cell_ei = compute_duplicates(vstim_data, NOISE)
     MUTUAL_THRESHOLD = 1
-    NOISE_THRESH = 2
+    EI_THRESH = 10
     POWER_THRESHOLD = 1.5
     END_TIME_LIMIT = 30
     START_TIME_LIMIT = 0
@@ -221,7 +221,7 @@ def load_vision_data_for_gsort(estim_type:str, visual_analysis_base:str, dataset
     TIME_LIMIT = END_TIME_LIMIT - START_TIME_LIMIT
     WINDOW_BUFFER = 20
 
-    def get_collapsed_ei_thr(cell_no, thr_factor):
+    def get_collapsed_ei_thr(cell_no, ei_thr):
         # Read the EI for a given cell
         cell_ei = vstim_data.get_ei_for_cell(cell_no).ei
         
@@ -229,7 +229,7 @@ def load_vision_data_for_gsort(estim_type:str, visual_analysis_base:str, dataset
         collapsed_ei = np.amin(cell_ei, axis=1)
         
         # Threshold the EI to pick out only electrodes with large enough values
-        good_inds = np.argwhere(np.abs(collapsed_ei) > thr_factor * NOISE).flatten()
+        good_inds = np.argwhere(np.abs(collapsed_ei) > ei_thr).flatten()
         
         return good_inds, np.abs(collapsed_ei)
 
@@ -276,7 +276,7 @@ def load_vision_data_for_gsort(estim_type:str, visual_analysis_base:str, dataset
         print(f'Loading data for cell type {type_}')
         
         for cell in tqdm.tqdm(vstim_data.get_all_cells_similar_to_type(type_)):
-            good_inds, _ = get_collapsed_ei_thr(cell, NOISE_THRESH)        
+            good_inds, _ = get_collapsed_ei_thr(cell, EI_THRESH)        
             relevant_patterns = []
             for i in range(len(stim_elecs)):
                 if np.any(np.in1d(stim_elecs[i], good_inds + 1)):
