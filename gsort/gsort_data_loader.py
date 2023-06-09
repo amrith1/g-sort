@@ -7,7 +7,7 @@ from scipy.io import loadmat
 from joblib import Memory
 from .vision_template_loader_class import TemplateLoader
 
-from estim_utils.triplet import TRIPLETS_ARRAY_519
+from estim_utils.triplet import TRIPLET_RECORD_ELECTRODES_519
 
 memory = Memory(os.getcwd())
 
@@ -257,7 +257,7 @@ def load_vision_data_for_gsort(estim_type:str, visual_analysis_base:str, dataset
         assert type(patterns) == np.ndarray, "User-input patterns should be numpy.ndarray" 
         if vstim_data.electrode_map.shape[0] == 519:
             BAD_ELECS_519 = np.array([1, 130, 259, 260, 389, 390, 519], dtype=int)
-            stim_elecs = TRIPLETS_ARRAY_519[patterns]
+            stim_elecs = TRIPLET_RECORD_ELECTRODES_519[patterns]
             bad_pattern_inds = np.where(np.any(np.isin(stim_elecs, BAD_ELECS_519), axis=1))[0]
             if len(bad_pattern_inds) > 0:
                 raise ValueError(f'Triplet patterns {patterns[bad_pattern_inds]} contain one or more inactive electrodes.')
