@@ -199,7 +199,7 @@ def get_cell_info(cell_types, vstim_data, compartments, noise, mutual_threshold 
 
 
 @memory.cache
-def load_vision_data_for_gsort(estim_type:str, visual_analysis_base:str, dataset:str, vstim_datarun:str, ei_thresh=15, patterns = None, cell_types = ['parasol', 'midget'], excluded_types = ['bad', 'dup']):     # RAT: 'ON' and 'OFF'
+def load_vision_data_for_gsort(estim_type:str, visual_analysis_base:str, dataset:str, vstim_datarun:str, noise_thresh=2, patterns = None, cell_types = ['parasol', 'midget'], excluded_types = ['bad', 'dup']):     # RAT: 'ON' and 'OFF'
     """Load vision data for g-sort analysis to be passed to run_pattern_movie_live"""
     compartments = ['soma', 'mixed']
     vstim_analysis_path = os.path.join(visual_analysis_base, dataset, vstim_datarun)
@@ -220,7 +220,7 @@ def load_vision_data_for_gsort(estim_type:str, visual_analysis_base:str, dataset
     TIME_LIMIT = END_TIME_LIMIT - START_TIME_LIMIT
     WINDOW_BUFFER = 20
 
-    def get_collapsed_ei_thr(cell_no, ei_thr):
+    def get_collapsed_ei_thr(cell_no, thr_factor):
         # Read the EI for a given cell
         cell_ei = vstim_data.get_ei_for_cell(cell_no).ei
         
@@ -228,7 +228,7 @@ def load_vision_data_for_gsort(estim_type:str, visual_analysis_base:str, dataset
         collapsed_ei = np.amin(cell_ei, axis=1)
         
         # Threshold the EI to pick out only electrodes with large enough values
-        good_inds = np.argwhere(np.abs(collapsed_ei) > ei_thr).flatten()
+        good_inds = np.argwhere(np.abs(collapsed_ei) > thr_factor * NOISE).flatten()
         
         return good_inds, np.abs(collapsed_ei)
 
@@ -275,7 +275,7 @@ def load_vision_data_for_gsort(estim_type:str, visual_analysis_base:str, dataset
         print(f'Loading data for cell type {type_}')
         
         for cell in tqdm.tqdm(vstim_data.get_all_cells_similar_to_type(type_)):
-            good_inds, _ = get_collapsed_ei_thr(cell, ei_thresh)        
+            good_inds, _ = get_collapsed_ei_thr(cell, noise_thresh)        
             relevant_patterns = []
             for i in range(len(stim_elecs)):
                 if np.any(np.in1d(stim_elecs[i], good_inds + 1)):
