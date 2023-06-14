@@ -199,7 +199,7 @@ def get_cell_info(cell_types, vstim_data, compartments, noise, mutual_threshold 
 
 
 @memory.cache
-def load_vision_data_for_gsort(estim_type:str, visual_analysis_base:str, dataset:str, vstim_datarun:str, patterns = None, cell_types = ['parasol', 'midget'], excluded_types = ['bad', 'dup']):     # RAT: 'ON' and 'OFF'
+def load_vision_data_for_gsort(estim_type:str, visual_analysis_base:str, dataset:str, vstim_datarun:str, ei_thresh=15, patterns = None, cell_types = ['parasol', 'midget'], excluded_types = ['bad', 'dup']):     # RAT: 'ON' and 'OFF'
     """Load vision data for g-sort analysis to be passed to run_pattern_movie_live"""
     compartments = ['soma', 'mixed']
     vstim_analysis_path = os.path.join(visual_analysis_base, dataset, vstim_datarun)
@@ -213,7 +213,6 @@ def load_vision_data_for_gsort(estim_type:str, visual_analysis_base:str, dataset
     NOISE = vstim_data.channel_noise
     duplicates, cell_ei = compute_duplicates(vstim_data, NOISE)
     MUTUAL_THRESHOLD = 1
-    EI_THRESH = 10
     POWER_THRESHOLD = 1.5
     END_TIME_LIMIT = 30
     START_TIME_LIMIT = 0
@@ -276,7 +275,7 @@ def load_vision_data_for_gsort(estim_type:str, visual_analysis_base:str, dataset
         print(f'Loading data for cell type {type_}')
         
         for cell in tqdm.tqdm(vstim_data.get_all_cells_similar_to_type(type_)):
-            good_inds, _ = get_collapsed_ei_thr(cell, EI_THRESH)        
+            good_inds, _ = get_collapsed_ei_thr(cell, ei_thresh)        
             relevant_patterns = []
             for i in range(len(stim_elecs)):
                 if np.any(np.in1d(stim_elecs[i], good_inds + 1)):
