@@ -9,7 +9,13 @@ from .vision_template_loader_class import TemplateLoader
 
 from estim_utils.triplet import TRIPLET_RECORD_ELECTRODES_519
 
-memory = Memory(os.getcwd())
+#See if RETINA_DATA_CACHE is set in environment variables
+
+memory = None
+if 'RETINA_DATA_CACHE' in os.environ:
+    memory = Memory(os.environ['RETINA_DATA_CACHE'])
+else:
+    memory = Memory(os.getcwd())
 
 
 def axonorsomaRatio(wave,uppBound=1.6,lowBound=0.05):
