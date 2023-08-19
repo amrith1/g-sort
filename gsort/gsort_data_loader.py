@@ -204,7 +204,7 @@ def get_cell_info(cell_types, vstim_data, compartments, noise, mutual_threshold 
     return total_electrode_list, cell_to_electrode_list, mutual_cells, array_id
 
 
-@memory.cache
+@memory.cache(ignore=['visual_analysis_base'])
 def load_vision_data_for_gsort(estim_type:str, visual_analysis_base:str, dataset:str, vstim_datarun:str, noise_thresh=2, patterns = None, cell_types = ['parasol', 'midget'], excluded_types = ['bad', 'dup']):     # RAT: 'ON' and 'OFF'
     """Load vision data for g-sort analysis to be passed to run_pattern_movie_live"""
     compartments = ['soma', 'mixed']
