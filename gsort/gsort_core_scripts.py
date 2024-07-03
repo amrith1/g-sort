@@ -881,7 +881,7 @@ def get_mask(signals, sat_band = 5,unsatured_min= -850, unsaturated_max = 400):
         mask[m[0],max(0,m[1]-sat_band):min(m[1]+sat_band, num_samples)] = 0
     return mask
 
-def get_probabilities(G, event_labels, num_trials = None):
+def get_probabilities_and_spike_trials(G, event_labels, num_trials = None):
     G_mod = G.copy()
     for n in [n for n in G_mod.nodes if G_mod.in_degree(n) > 1]:
         edge_list = list(G_mod.in_edges(n))[1:]
@@ -892,16 +892,20 @@ def get_probabilities(G, event_labels, num_trials = None):
     cells_to_edges = {v: [ j for j, l in edge_to_cells.items() if l == v] for k, v in edge_to_cells.items()}
     probabilities = Counter()
     event_counter = Counter(event_labels)
+    spike_trials_by_cell = {c:[] for c in set(list(cells_on_graph))}
     for c in set(list(cells_on_graph)):
         for u, v in cells_to_edges[c]:
             probabilities[c] += event_counter[v]
+            spike_trials_by_cell[c] += np.where(event_labels == v)[0].tolist()
             for n in nx.descendants(G_mod, v):
                 probabilities[c] += event_counter[n]
+                spike_trials_by_cell[c] += np.where(event_labels == n)[0].tolist()
         if num_trials:
             probabilities[c] /= num_trials
         else:
             probabilities[c] /= len(event_labels)
-    return probabilities
+    spike_trials_by_cell = {k: list(set(v)) for k, v in spike_trials_by_cell.items()}
+    return probabilities, spike_trials_by_cell
 
 def get_shifts(signals,event_labels, m, n):
     """
@@ -1051,6 +1055,7 @@ def run_pattern_movie_live(signal, preloaded_data):
     # Initialize output arrays
     probs = np.zeros(len(cells_to_gsort))
     num_trials = len(signal)
+    spike_record = np.zeros((len(cells_to_gsort), num_trials), dtype=int)
 
     # Iterate over all potential cells
     cell_ind = 0
@@ -1078,7 +1083,7 @@ def run_pattern_movie_live(signal, preloaded_data):
             G, final_signals, edge_to_matched_signals, note = DAG_estimation(event_labels, electrode_list, raw_signal, mask, 1, noise, data_on_cells)
 
             # Compute probabilities from graph
-            cell_to_prob = get_probabilities(G, event_labels)
+            cell_to_prob, cell_to_spike_trials = get_probabilities_and_spike_trials(G, event_labels)
             
             # Find bad edges in graph
             bad_edges = find_bad_edges(cell, edge_to_matched_signals, mask, data_on_cells, electrode_list, noise)
@@ -1086,12 +1091,20 @@ def run_pattern_movie_live(signal, preloaded_data):
             prob_error = compute_probability_error(G, event_labels, bad_edges)
             probs[cell_ind] = cell_to_prob[cell]-prob_error
 
+            #round probs to the nearest multiple of 1/num_trials
+            probs[cell_ind] = round(probs[cell_ind]*num_trials)/num_trials
+            #truncate to [0,1]
+            probs[cell_ind] = min(max(probs[cell_ind],0),1)
+
+            if cell in cell_to_spike_trials.keys():
+                spike_record[cell_ind, cell_to_spike_trials[cell]] = 1
+
         cell_ind += 1
             
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
 
-    return probs
+    return probs, spike_record
 
 def shift_sig(sig, shifts):
     """
@@ -1121,3 +1134,9 @@ def strided_indexing_roll(A, r):
     # Get sliding windows; use advanced-indexing to select appropriate ones
     n = A.shape[1]
     return view_as_windows(A_ext,(1,n))[np.arange(len(r)), -r + (n-1),0]
+
+
+def load_and_run_pattern_movie_live(stim_electrode, amp_index, pp_path, preloaded_data):
+    from estim_utils.gogliettinodeep import get_oldlabview_519_amrith
+    pp_tensor = get_oldlabview_519_amrith(pp_path, stim_electrode, amp_index).transpose(0, 2, 1)[:, 1:, :]
+    return run_pattern_movie_live(pp_tensor, preloaded_data)
